@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chapter.name }} - SCM智课</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="{{ url_for('chapter_select') }}" class="nav-brand">📚 SCM智课</a>
+            <span class="nav-subtitle">{{ chapter.name }}</span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-user">👤 {{ session.get('realname', session.get('username')) }}</span>
+            {% if session.get('role') == 'teacher' %}
+            <a href="{{ url_for('teacher_dashboard') }}" class="btn btn-sm">管理面板</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline">退出</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="chapter-header">
+            <span class="chapter-icon-lg">{{ chapter.icon }}</span>
+            <div><h1>{{ chapter.name }}</h1><p class="chapter-overview">{{ chapter.overview }}</p></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('enterprise')">🏭 企业实践</button>
+            <button class="tab-btn" onclick="switchTab('academic')">🎓 学术研究</button>
+            <button class="tab-btn" onclick="switchTab('career')">💼 职业发展</button>
+            <button class="tab-btn" onclick="switchTab('practice')">🎮 互动实践</button>
+            <button class="tab-btn" onclick="switchTab('ai')">🤖 AI问答</button>
+        </div>
+
+        <!-- Enterprise Tab -->
+        <div id="tab-enterprise" class="tab-content active">
+            <h2>{{ chapter.enterprise.title }}</h2>
+            {% for case in chapter.enterprise.cases %}
+            <div class="content-card">
+                <div class="card-tag">{{ case.tag }}</div>
+                <h3>{{ case.name }}</h3>
+                {% if case.concepts %}<p class="case-concepts"><strong>涉及概念：</strong>{{ case.concepts }}</p>{% endif %}
+                <p>{{ case.content }}</p>
+                {% if case.media_link %}
+                <a href="{{ case.media_link }}" target="_blank" class="btn btn-sm" rel="noopener">📺 {{ case.media_desc }}</a>
+                {% else %}
+                <span class="text-muted">📖 {{ case.media_desc }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="content-card" style="text-align:center;background:#E3F2FD">
+                <h4>📤 贡献案例</h4>
+                <p>发现与本章相关的最新企业实践案例？欢迎提交！</p>
+                <div class="form-group"><input type="text" id="new-case-name" placeholder="案例名称（如：特斯拉得州超级工厂供应链）"></div>
+                <div class="form-group"><textarea id="new-case-desc" rows="3" placeholder="案例描述……"></textarea></div>
+                <button class="btn btn-primary" onclick="submitNewCase()">提交案例</button>
+            </div>
+        </div>
+
+        <!-- Academic Tab -->
+        <div id="tab-academic" class="tab-content">
+            <h2>{{ chapter.academic.title }}</h2>
+            <div class="content-card">
+                <h3>📌 学术流派</h3>
+                {% for stream in chapter.academic.streams %}
+                <div class="stream-item">
+                    <strong>{{ stream.name }}</strong>：{{ stream.focus }}
+                    <br><small>代表学者：{{ stream.key_authors }}</small>
+                    {% if stream.detail %}<p style="margin-top:6px;font-size:14px">{{ stream.detail }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="content-card">
+                <h3>📈 研究脉络演化</h3>
+                <p class="evolution-text">{{ chapter.academic.evolution }}</p>
+            </div>
+            <div class="content-card">
+                <h3>🔥 研究热点</h3>
+                <ul class="hot-list">
+                    {% for t in chapter.academic.hot_topics %}<li>{{ t }}</li>{% endfor %}
+                </ul>
+            </div>
+            <div class="content-card">
+                <h3>🛠 需掌握的技能</h3>
+                <div class="skills-bar">
+                    {% for s in chapter.academic.skills %}<span class="skill-tag">{{ s }}</span>{% endfor %}
+                </div>
+            </div>
+            <h3>📖 必读经典文献（详细解读）</h3>
+            {% for p in chapter.academic.key_papers %}
+            <div class="content-card paper-detail-card">
+                <h4>📄 {{ p.title }}</h4>
+                <p><strong>作者：</strong>{{ p.authors }} | <strong>期刊：</strong>{{ p.journal }} | <strong>年份：</strong>{{ p.year }}</p>
+                <div class="paper-section"><strong>📝 摘要(Abstract)：</strong>{{ p.abstract }}</div>
+                <div class="paper-section"><strong>🔬 理论(Theory)：</strong>{{ p.theory }}</div>
+                <div class="paper-section"><strong>🔧 方法(Method)：</strong>{{ p.method }}</div>
+                <div class="paper-section"><strong>✅ 结论(Conclusion)：</strong>{{ p.conclusion }}</div>
+                <div class="paper-section"><strong>💬 讨论(Discussion)：</strong>{{ p.discussion }}</div>
+                {% if p.real %}<span class="badge badge-success">✅ 真实文献</span>{% endif %}
+            </div>
+            {% endfor %}
+            <div class="content-card" style="text-align:center;background:#E3F2FD">
+                <h4>📤 推荐文献</h4>
+                <p>发现有价值的最新相关文献？欢迎推荐！</p>
+                <div class="form-group"><input type="text" id="new-paper-title" placeholder="文献标题"></div>
+                <div class="form-group"><input type="text" id="new-paper-authors" placeholder="作者（如：Smith, J. & Wang, L.）"></div>
+                <button class="btn btn-primary" onclick="submitNewPaper()">推荐文献</button>
+            </div>
+        </div>
+
+        <!-- Career Tab -->
+        <div id="tab-career" class="tab-content">
+            <h2>{{ chapter.career.title }}</h2>
+            {% for pos in chapter.career.positions %}
+            <div class="content-card">
+                <h3>💼 {{ pos.title }}</h3>
+                <p><strong>🏢 代表企业：</strong>{{ pos.company }}</p>
+                <p><strong>💰 薪资范围：</strong>{{ pos.salary }}</p>
+                <p><strong>📋 岗位职责：</strong>{{ pos.jd }}</p>
+                <p><strong>🛠 核心技能：</strong>{{ pos.skills }}</p>
+                <p><strong>📜 推荐认证：</strong>{{ pos.cert }}</p>
+                {% if pos.video_link %}
+                <a href="{{ pos.video_link }}" target="_blank" class="btn btn-sm" rel="noopener">📺 {{ pos.video_desc }}</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="content-card">
+                <h3>📊 行业趋势</h3>
+                <p>{{ chapter.career.trend }}</p>
+            </div>
+        </div>
+
+        <!-- Practice Tab -->
+        <div id="tab-practice" class="tab-content">
+            <h2>🎮 互动实践任务</h2>
+            <p class="text-muted">每章至少1课时动手实践 · 学生分组完成 · 系统实时反馈</p>
+            {% for task in chapter.practice_tasks %}
+            <div class="content-card practice-card">
+                <div class="practice-header">
+                    <h3>{{ task.name }}</h3>
+                    <span class="badge badge-type">{{ task.type }}</span>
+                </div>
+                <p>{{ task.description }}</p>
+                <div class="practice-meta"><span><strong>互动形式：</strong>{{ task.evaluation }}</span></div>
+                <a href="{{ url_for('practice_view', chapter_key=chapter_key, task_key=task.key) }}" class="btn btn-primary">🚀 开始实践</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- AI Tab -->
+        <div id="tab-ai" class="tab-content">
+            <h2>🤖 AI学习助手</h2>
+            <p class="text-muted">以下是本章的10个常见问题，点击即可查看答案。也可以输入你自己的问题。</p>
+            <div class="preset-questions">
+                {% for qa_item in chapter.ai_qa %}
+                <div class="preset-q" onclick="showPresetAnswer('{{ qa_item.q | replace("'", "\\'") }}', '{{ qa_item.a | replace("'", "\\'") }}')">
+                    💡 {{ qa_item.q }}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="ai-chat-container" style="margin-top:20px">
+                <div id="ai-messages" class="ai-messages">
+                    <div class="ai-msg system"><strong>AI助教：</strong>欢迎！你可以点击上面的预设问题或输入你的问题。</div>
+                </div>
+                <div class="ai-input-area">
+                    <input type="text" id="ai-question" placeholder="输入你的问题……" onkeypress="if(event.key==='Enter')askAI()">
+                    <button class="btn btn-primary" onclick="askAI()">提问</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-actions">
+            <button class="btn btn-outline" onclick="submitFeedback()">📝 课后反馈</button>
+        </div>
+
+        <div id="feedback-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h3>📝 课后反馈</h3>
+                <p>章节：{{ chapter.name }}</p>
+                <label>评分：</label>
+                <div class="star-rating">
+                    <span onclick="setRating(1)">⭐</span><span onclick="setRating(2)">⭐</span>
+                    <span onclick="setRating(3)">⭐</span><span onclick="setRating(4)">⭐</span>
+                    <span onclick="setRating(5)">⭐</span>
+                </div>
+                <input type="hidden" id="feedback-rating" value="5">
+                <label>留言：</label>
+                <textarea id="feedback-comment" rows="3" placeholder="有什么想对老师说的？"></textarea>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="doSubmitFeedback()">提交</button>
+                    <button class="btn btn-outline" onclick="closeFeedback()">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const CHAPTER_KEY = '{{ chapter_key }}';
+const CHAPTER_NAME = '{{ chapter.name }}';
+let feedbackRating = 5;
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab-btn[onclick="switchTab(\'' + tab + '\')"]').classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function showPresetAnswer(q, a) {
+    const msgs = document.getElementById('ai-messages');
+    msgs.innerHTML += '<div class=\"ai-msg user\"><strong>我：</strong>' + q + '</div>';
+    msgs.innerHTML += '<div class=\"ai-msg system\"><strong>AI助教：</strong>' + a + '</div>';
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function askAI() {
+    const input = document.getElementById('ai-question');
+    const question = input.value.trim();
+    if(!question) return;
+    const msgs = document.getElementById('ai-messages');
+    msgs.innerHTML += '<div class=\"ai-msg user\"><strong>我：</strong>' + question + '</div>';
+    input.value = '';
+    msgs.innerHTML += '<div class=\"ai-msg loading\">AI思考中...</div>';
+    msgs.scrollTop = msgs.scrollHeight;
+    try {
+        const resp = await fetch('/api/ai/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chapter:CHAPTER_NAME})});
+        const data = await resp.json();
+        document.querySelector('.ai-msg.loading')?.remove();
+        msgs.innerHTML += '<div class=\"ai-msg system\"><strong>AI助教：</strong>' + data.answer + '</div>';
+    } catch(e) {
+        document.querySelector('.ai-msg.loading')?.remove();
+        msgs.innerHTML += '<div class=\"ai-msg error\">请求失败，请稍后重试</div>';
+    }
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function setRating(v) {
+    feedbackRating = v;
+    document.getElementById('feedback-rating').value = v;
+    document.querySelectorAll('.star-rating span').forEach((s,i) => {s.style.opacity = i < v ? '1' : '0.3';});
+}
+function submitFeedback() { document.getElementById('feedback-modal').style.display = 'flex'; }
+function closeFeedback() { document.getElementById('feedback-modal').style.display = 'none'; }
+async function doSubmitFeedback() {
+    const rating = document.getElementById('feedback-rating').value;
+    const comment = document.getElementById('feedback-comment').value;
+    try {
+        await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chapter:CHAPTER_NAME,rating:parseInt(rating),comment})});
+        closeFeedback();
+        alert('感谢你的反馈！');
+    } catch(e) { alert('提交失败，请重试'); }
+}
+
+function submitNewCase() {
+    const name = document.getElementById('new-case-name').value.trim();
+    const desc = document.getElementById('new-case-desc').value.trim();
+    if(!name || !desc) {alert('请填写案例名称和描述');return;}
+    alert('感谢贡献！案例"' + name + '"已提交，教师审核后将添加到知识库。');
+    // In production, save to DB
+}
+function submitNewPaper() {
+    const title = document.getElementById('new-paper-title').value.trim();
+    const authors = document.getElementById('new-paper-authors').value.trim();
+    if(!title||!authors) {alert('请填写文献标题和作者');return;}
+    alert('感谢推荐！文献"' + title + '"已提交，教师审核后将添加到知识库。');
+}
+</script>
+</body>
+</html>

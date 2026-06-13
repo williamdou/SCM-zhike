@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师管理面板 - SCM智课</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="{{ url_for('teacher_dashboard') }}" class="nav-brand">📚 SCM智课</a>
+            <span class="nav-subtitle">教师管理面板</span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-user">👤 {{ session.get('realname', session.get('username')) }}（教师）</span>
+            <a href="{{ url_for('chapter_select') }}" class="btn btn-sm">课程章节</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline">退出</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Stats overview -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_students }}</div>
+                <div class="stat-label">注册学生数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_activities }}</div>
+                <div class="stat-label">总活动记录</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_practices }}</div>
+                <div class="stat-label">实践任务完成数</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Chapter popularity -->
+            <div class="dashboard-card">
+                <h3>📊 章节访问热度</h3>
+                {% if chapter_stats %}
+                <div class="chart-container">
+                    <canvas id="chapter-chart"></canvas>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无数据</p>
+                {% endif %}
+            </div>
+
+            <!-- Recent activities -->
+            <div class="dashboard-card">
+                <h3>🕐 最近活动</h3>
+                <div class="activity-list">
+                    {% for act in recent %}
+                    <div class="activity-item">
+                        <span class="activity-user">{{ act.realname }}</span>
+                        <span class="activity-action">{{ act.action }}</span>
+                        <span class="activity-chapter">「{{ act.chapter }}」</span>
+                        <span class="activity-time">{{ act.created_at[:16] }}</span>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">暂无活动记录</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Student list -->
+            <div class="dashboard-card full-width">
+                <h3>👨‍🎓 学生列表</h3>
+                <table class="data-table">
+                    <tr>
+                        <th>姓名</th><th>用户名</th><th>学校</th><th>院系</th><th>注册时间</th><th>操作</th>
+                    </tr>
+                    {% for s in students %}
+                    <tr>
+                        <td>{{ s.realname }}</td>
+                        <td>{{ s.username }}</td>
+                        <td>{{ s.school or '-' }}</td>
+                        <td>{{ s.department or '-' }}</td>
+                        <td>{{ s.created_at[:10] }}</td>
+                        <td><a href="{{ url_for('student_detail', student_id=s.id) }}" class="btn btn-sm">查看详情</a></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-muted">暂无注册学生</td></tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- Student scores -->
+            {% if student_scores %}
+            <div class="dashboard-card full-width">
+                <h3>📈 学生实践成绩</h3>
+                <table class="data-table">
+                    <tr><th>学生</th><th>章节</th><th>任务</th><th>平均得分</th><th>完成次数</th></tr>
+                    {% for s in student_scores %}
+                    <tr>
+                        <td>{{ s.realname }}</td>
+                        <td>{{ s.chapter }}</td>
+                        <td>{{ s.task_name }}</td>
+                        <td>{{ s.avg_score }}</td>
+                        <td>{{ s.cnt }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Feedback -->
+            <div class="dashboard-card full-width">
+                <h3>💬 学生反馈</h3>
+                {% for fb in feedbacks %}
+                <div class="feedback-item">
+                    <div class="feedback-header">
+                        <strong>{{ fb.realname }}</strong>
+                        <span class="feedback-stars">{% for _ in range(fb.rating) %}⭐{% endfor %}</span>
+                        <span class="feedback-time">{{ fb.created_at[:16] }}</span>
+                    </div>
+                    <p>{{ fb.comment or '(无文字)' }}</p>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无反馈</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+<script>
+// Chapter chart
+{% if chapter_stats %}
+const ctx = document.getElementById('chapter-chart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    indexAxis: 'y',
+    data: {
+        labels: [{% for cs in chapter_stats %}'{{ cs.chapter[:20] }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: '访问次数',
+            data: [{% for cs in chapter_stats %}{{ cs.cnt }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: '#2196F3'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { title: { display: true, text: '访问次数' } } }
+    }
+});
+{% endif %}
+</script>
+</body>
+</html>

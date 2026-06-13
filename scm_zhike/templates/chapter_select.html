@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCM智课 - 课程章节</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="{{ url_for('chapter_select') }}" class="nav-brand">📚 SCM智课</a>
+            <span class="nav-subtitle">供应链管理研究（48学时）</span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-user">👤 {{ session.get('realname', session.get('username')) }}</span>
+            <span class="nav-role {{ session.get('role') }}">{{ '教师' if session.get('role')=='teacher' else '学生' }}</span>
+            {% if session.get('role') == 'teacher' %}
+            <a href="{{ url_for('teacher_dashboard') }}" class="btn btn-sm">管理面板</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline">退出</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📖 课程章节</h1>
+            <p>共16章 · 每章含企业案例、学术研究、职业发展、互动实践四维内容 · 每章至少1课时动手实践</p>
+        </div>
+
+        <div class="chapter-grid">
+            {% for ch in chapters %}
+            <a href="{{ url_for('chapter_view', chapter_key=ch.key) }}" class="chapter-card">
+                <div class="chapter-icon">{{ ch.icon }}</div>
+                <div class="chapter-info">
+                    <h3>{{ loop.index }}. {{ ch.name }}</h3>
+                    <p>{{ ch.overview[:60] }}...</p>
+                    <div class="chapter-meta">
+                        <span class="badge">🏭 {{ ch.enterprise_cases }}个案例</span>
+                        <span class="badge">🎮 {{ ch.practice_tasks }}个实践</span>
+                        {% if ch.completed > 0 %}
+                        <span class="badge badge-success">已完成 {{ ch.completed }}项</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ task.name }} - {{ chapter.name }} - SCM智课</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="{{ url_for('chapter_view', chapter_key=chapter_key) }}" class="nav-brand">← 返回章节</a>
+            <span class="nav-subtitle">{{ task.name }}</span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-user">👤 {{ session.get('realname', session.get('username')) }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline">退出</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="chapter-header">
+            <span class="chapter-icon-lg">{{ chapter.icon }}</span>
+            <div>
+                <h1>{{ task.name }}</h1>
+                <p>{{ task.description }}</p>
+            </div>
+        </div>
+        <div id="practice-area" class="practice-area"><p>正在加载互动实践...</p></div>
+    </div>
+
+<script>
+const CHAPTER_KEY = '{{ chapter_key }}';
+const CHAPTER_NAME = '{{ chapter.name }}';
+const TASK_KEY = '{{ task_key }}';
+const TASK_NAME = '{{ task.name }}';
+const INPUT_TYPE = '{{ task.input_type }}';
+
+(function() {
+    const handlers = {};
+
+    // ---- ch11: Beer Game ----
+    handlers['beer_game'] = function() {
+        fetch('/api/practice/beer_game/init',{method:'POST'}).then(r=>r.json()).then(s=>renderBeerGame(s));
+    };
+    handlers['supplier_eval'] = initSupplierEval;
+    handlers['facility_location'] = initFacilityLocation;
+    handlers['pricing_sim'] = initPricingSim;
+    handlers['make_or_buy'] = initMakeOrBuy;
+    handlers['delivery_route'] = initDeliveryRoute;
+    handlers['risk_scenario'] = initRiskScenario;
+    handlers['scm_map'] = initScmMap;
+    handlers['vertical_vs_outsource'] = initVerticalVsOutsource;
+    handlers['tech_assessment'] = initTechAssessment;
+    handlers['fisher_match'] = initFisherMatch;
+    handlers['info_sharing'] = initInfoSharing;
+    handlers['postponement'] = initPostponement;
+    handlers['info_value'] = initInfoValue;
+    handlers['production_schedule'] = initProductionSchedule;
+    handlers['scor_kpi'] = initScorKpi;
+
+    const area = document.getElementById('practice-area');
+    if (handlers[TASK_KEY]) {
+        handlers[TASK_KEY]();
+    } else {
+        area.innerHTML = '<div class="content-card"><h3>📝 动手实践任务</h3><p>{{ task.description }}</p><p><strong>互动形式：</strong>{{ task.evaluation }}</p><div class="practice-note"><p>💡 请在课堂上在教师指导下完成此任务。</p></div></div>';
+    }
+})();
+
+async function saveResult(score, detail) {
+    try {
+        await fetch('/api/practice/save_result', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({chapter: CHAPTER_NAME, task_name: TASK_NAME, score, detail})
+        });
+    } catch(e) {}
+}
+
+// ============================================================
+// ch01: SCM Map - Supply Chain Mapping
+// ============================================================
+function initScmMap() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>🗺️ 绘制供应链地图</h3>
+            <p>选择一款你日常使用的产品，识别它的供应链包含哪些环节。</p>
+            <div class="form-group"><label>你选择的产品：</label><input type="text" id="scm-product" placeholder="例如：iPhone、瑞幸咖啡、Nike运动鞋"></div>
+            <div class="form-group"><label>原材料供应商：</label><input type="text" id="comp-suppliers" placeholder="列出关键原材料及其来源"></div>
+            <div class="form-group"><label>制造商/加工厂：</label><input type="text" id="comp-manufacturers" placeholder="核心零部件或成品制造商"></div>
+            <div class="form-group"><label>分销商/批发商：</label><input type="text" id="comp-distributors" placeholder="区域分销或批发环节"></div>
+            <div class="form-group"><label>零售商/销售渠道：</label><input type="text" id="comp-retailers" placeholder="消费者购买的渠道"></div>
+            <div class="form-group"><label>物流服务商：</label><input type="text" id="comp-logistics" placeholder="运输、仓储、配送服务"></div>
+            <div class="form-group"><label>信息流传导：</label><input type="text" id="comp-info_flow" placeholder="订单、预测、库存信息如何传递"></div>
+            <div class="form-group"><label>资金流方向：</label><input type="text" id="comp-cash_flow" placeholder="付款及资金流向"></div>
+            <button class="btn btn-primary btn-lg" onclick="runScmMap()">提交分析</button>
+            <div id="scm-map-result"></div>
+        </div>`;
+}
+
+async function runScmMap() {
+    const components = {
+        suppliers: document.getElementById('comp-suppliers').value,
+        manufacturers: document.getElementById('comp-manufacturers').value,
+        distributors: document.getElementById('comp-distributors').value,
+        retailers: document.getElementById('comp-retailers').value,
+        logistics: document.getElementById('comp-logistics').value,
+        info_flow: document.getElementById('comp-info_flow').value,
+        cash_flow: document.getElementById('comp-cash_flow').value,
+    };
+    const product = document.getElementById('scm-product').value;
+    const resp = await fetch('/api/practice/scm_map/check', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({components, product})
+    });
+    const data = await resp.json();
+    await saveResult(data.score, {components, product});
+    document.getElementById('scm-map-result').innerHTML = `<h3>📊 分析结果 (得分: ${data.score})</h3><pre style="white-space:pre-wrap">${data.feedback}</pre>`;
+}
+
+// ============================================================
+// ch02: Vertical Integration vs Outsourcing
+// ============================================================
+function initVerticalVsOutsource() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>⚖️ 比亚迪 vs 苹果：一体化还是外包？</h3>
+            <p>你是一家新能源汽车初创企业的供应链负责人。车规级芯片目前全球仅3-5家供应商可量产，价格波动大且供应不稳定。</p>
+            <div class="option-group-vertical">` +
+            ['A','B','C'].map(o => `<button class="btn btn-lg option-btn" onclick="runVerticalVsOutsource('${o}')"><strong>${o} - ${({'A':'自建芯片产线（垂直整合）','B':'与供应商签长约锁价','C':'混合策略：部分自研+部分长约+培育第二供应商'})[o]}</strong><span>${({'A':'投资5亿元，3年投产，供应完全自主','B':'即期锁定供应，无需资本投入，保持灵活性','C':'短期保供应+中期增选择+长期建能力'})[o]}</span></button>`).join('') +
+            `</div><div id="vv-result"></div></div>`;
+}
+
+async function runVerticalVsOutsource(choice) {
+    const resp = await fetch('/api/practice/vertical_vs_outsource/check', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({choice, reasons: ''})
+    });
+    const data = await resp.json();
+    await saveResult(data.score, {choice});
+    document.getElementById('vv-result').innerHTML = `
+        <h3>📊 决策评估 (得分: ${data.score})</h3>
+        <p>你选择了：<strong>${data.name}</strong></p>
+        <div class="content-card" style="background:#E8F5E9"><strong>优点：</strong>${data.pros}</div>
+        <div class="content-card" style="background:#FFEBEE"><strong>风险：</strong>${data.cons}</div>
+        <p><strong>${data.analysis}</strong></p>`;
+}
+
+// ============================================================
+// ch03: Technology Assessment Ranking
+// ============================================================
+function initTechAssessment() {
+    const area = document.getElementById('practice-area');
+    const techs = [
+        {key:'ai_forecast',name:'AI需求预测',desc:'用AI预测各SKU未来需求，降低库存和缺货'},
+        {key:'rfid',name:'RFID全链追踪',desc:'每个商品贴RFID标签，实现全程可视化追踪'},
+        {key:'digital_twin',name:'数字孪生',desc:'构建供应链虚拟副本，模拟和优化决策'},
+        {key:'blockchain',name:'区块链溯源',desc:'利用区块链记录每件商品的全程流转'},
+        {key:'drone',name:'无人机配送',desc:'使用无人机进行末端配送'},
+        {key:'d_printing',name:'3D打印备件',desc:'门店现场3D打印维修备件'},
+    ];
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>🔮 技术趋势评估矩阵</h3>
+            <p>一家食品零售企业（类似盒马/永辉）有6项新技术候选。请按照"投资回报优先级"排序（拖动滑块调整优先级，1=最重要）：</p>
+            ${techs.map(t => `
+            <div class="weight-item">
+                <label style="width:140px">${t.name}</label>
+                <input type="range" min="1" max="6" value="${techs.indexOf(t)+1}" id="rank-${t.key}" oninput="document.getElementById('v-${t.key}').textContent=this.value">
+                <span id="v-${t.key}" style="width:20px">${techs.indexOf(t)+1}</span>
+                <small style="color:#666">${t.desc}</small>
+            </div>`).join('')}
+            <button class="btn btn-primary btn-lg" onclick="runTechAssessment()">提交排序</button>
+            <div id="tech-result"></div>
+        </div>`;
+}
+
+async function runTechAssessment() {
+    const ranking = ['ai_forecast','rfid','digital_twin','blockchain','drone','d_printing']
+        .map(k => ({key:k, rank:parseInt(document.getElementById('rank-'+k).value)}))
+        .sort((a,b) => a.rank - b.rank)
+        .map(x => x.key);
+    const resp = await fetch('/api/practice/tech_assessment/check', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ranking})
+    });
+    const data = await resp.json();
+    await saveResult(data.score, {ranking});
+    document.getElementById('tech-result').innerHTML = `
+        <h3>📊 评估结果 (得分: ${data.score}, 相关性: ${data.correlation})</h3>
+        <p>${data.analysis}</p>
+        <h4>专家基准排序：</h4>
+        <ol>${data.expert_ranking.map(r => `<li><strong>${r.name}</strong>——${r.reason}</li>`).join('')}</ol>`;
+}
+
+// ============================================================
+// ch04: Fisher Matrix Matching
+// ============================================================
+function initFisherMatch() {
+    const area = document.getElementById('practice-area');
+    const products = [
+        {key:'furniture',name:'高端定制家具',desc:'需求不确定、利润率高、生命周期长'},
+        {key:'water',name:'品牌瓶装水',desc:'需求稳定、利润率低、生命周期长'},
+        {key:'phone',name:'新款智能手机',desc:'需求高度不确定、利润率高、生命周期短(<1年)'},
+        {key:'screw',name:'标准工业螺丝',desc:'需求极稳定、利润率极低、生命周期极长'},
+    ];
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>🎯 Fisher矩阵实战匹配</h3>
+            <p>为以下4种产品选择最匹配的供应链类型：<strong>效率型</strong>(效率优先、成本最低化) 或 <strong>响应型</strong>(速度优先、弹性最大化)</p>
+            ${products.map(p => `
+            <div class="content-card">
+                <strong>${p.name}</strong>：${p.desc}
+                <div class="option-group">
+                    <button class="btn btn-lg" id="btn-${p.key}-eff" onclick="selectFisher('${p.key}','efficient')">⚡ 效率型</button>
+                    <button class="btn btn-lg" id="btn-${p.key}-resp" onclick="selectFisher('${p.key}','responsive')">🚀 响应型</button>
+                </div>
+            </div>`).join('')}
+            <button class="btn btn-primary btn-lg" onclick="runFisherMatch()">提交匹配</button>
+            <div id="fisher-result"></div>
+        </div>`;
+    window._fisherSelections = {};
+    window.selectFisher = function(key, type) {
+        window._fisherSelections[key] = type;
+        document.querySelectorAll(`[id^=btn-${key}]`).forEach(b => b.style.borderColor = '#ddd');
+        document.getElementById(`btn-${key}-${type === 'efficient' ? 'eff' : 'resp'}`).style.borderColor = '#2196F3';
+        document.getElementById(`btn-${key}-${type === 'efficient' ? 'eff' : 'resp'}`).style.background = '#E3F2FD';
+    };
+}
+
+async function runFisherMatch() {
+    const matches = window._fisherSelections || {};
+    const resp = await fetch('/api/practice/fisher_match/check', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({matches})
+    });
+    const data = await resp.json();
+    await saveResult(data.score, {matches});
+    document.getElementById('fisher-result').innerHTML = `
+        <h3>📊 匹配结果 (得分: ${data.score}, 正确: ${data.correct_count}/${data.total})</h3>
+        <p>${data.feedback}</p>
+        ${data.details.map(d => `<div class="content-card" style="border-left:4px solid ${d.is_correct?'#4CAF50':'#F44336'}">
+            <strong>${d.name}</strong>：你选${d.student==='efficient'?'效率型':'响应型'} | 正确答案：${d.correct==='efficient'?'效率型':'响应型'} ${d.is_correct?'✅':'❌'}<br><small>${d.reason}</small>
+        </div>`).join('')}`;
+}
+
+// ============================================================
+// ch05: Information Sharing Experiment
+// ============================================================
+function initInfoSharing() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>📡 信息共享价值实验</h3>
+            <p>实验对比两种情境：<strong>第1阶段</strong>(无信息共享)上游仅根据你的订货量推测需求。 <strong>第2阶段</strong>(有信息共享)上游看到你的真实需求。</p>
+            <p>你扮演零售商，面对波动的市场需求做出订货决策。每个阶段5轮。</p>
+            <div id="info-sharing-game">
+                <div class="option-group">
+                    <button class="btn btn-lg btn-primary" onclick="startInfoPhase(1)">🔴 第1阶段：无信息共享</button>
+                    <button class="btn btn-lg btn-outline" onclick="startInfoPhase(2)">🟢 第2阶段：有信息共享</button>
+                </div>
+            </div>
+        </div>`;
+    window._infoPhaseResults = {1: [], 2: []};
+    window._infoRoundState = {phase: 1, round: 0};
+}
+
+function startInfoPhase(phase) {
+    window._infoRoundState = {phase, round: 0};
+    window._infoPhaseResults[phase] = [];
+    playInfoRound();
+}
+
+async function playInfoRound() {
+    const state = window._infoRoundState;
+    const area = document.getElementById('info-sharing-game');
+    if (state.round >= 5) {
+        showInfoResults();
+        return;
+    }
+    area.innerHTML = `
+        <h4>${state.phase === 1 ? '🔴 第1阶段：无信息共享' : '🟢 第2阶段：有信息共享'} —— 第 ${state.round + 1}/5 轮</h4>
+        <p>第${state.round+1}周，你观察到需求为 <strong>${[100,105,95,110,90][state.round]} 箱</strong></p>
+        <div class="game-action">
+            <input type="number" id="info-order" value="${[100,105,95,110,90][state.round]}" min="50" max="200">
+            <button class="btn btn-primary btn-lg" onclick="submitInfoRound()">提交订货量</button>
+        </div>`;
+}
+
+async function submitInfoRound() {
+    const state = window._infoRoundState;
+    const orderQty = parseInt(document.getElementById('info-order').value) || 100;
+    const resp = await fetch('/api/practice/info_sharing/run', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({phase: state.phase, order_qty: orderQty, round: state.round})
+    });
+    const data = await resp.json();
+    window._infoPhaseResults[state.phase].push(data);
+    window._infoRoundState.round = data.round;
+
+    const area = document.getElementById('info-sharing-game');
+    area.innerHTML = `
+        <h4>${data.phase_label} —— 第 ${data.round}/${data.max_rounds} 轮结果</h4>
+        <table class="game-table">
+            <tr><td>实际需求</td><td>${data.demand} 箱</td></tr>
+            <tr><td>你的订货量</td><td>${data.your_order} 箱</td></tr>
+            <tr><td>上游响应订单</td><td>${data.upstream_order} 箱</td></tr>
+            <tr><td>放大系数</td><td><strong>${data.amplification}×</strong></td></tr>
+        </table>
+        <p>${data.analysis}</p>
+        ${data.game_over ?
+            `<button class="btn btn-primary btn-lg" onclick="${state.phase===1?'startInfoPhase(2)':'showInfoResults()'}">${state.phase===1?'进入第2阶段 (有信息共享)':'查看完整对比结果'}</button>` :
+            `<button class="btn btn-primary btn-lg" onclick="playInfoRound()">下一轮</button>`}`;
+}
+
+function showInfoResults() {
+    const p1 = window._infoPhaseResults[1] || [];
+    const p2 = window._infoPhaseResults[2] || [];
+    const avg1 = p1.length ? p1.reduce((s,r)=>s+r.amplification,0)/p1.length : 0;
+    const avg2 = p2.length ? p2.reduce((s,r)=>s+r.amplification,0)/p2.length : 0;
+
+    let html = `<div class="content-card"><h3>📊 实验结果对比</h3>
+        <table class="game-table">
+            <tr><th>阶段</th><th>各轮放大系数</th><th>平均放大系数</th></tr>
+            <tr><td>🔴 无信息共享</td><td>${p1.length?p1.map(r=>r.amplification+'×').join(', '):'未运行'}</td><td><strong>${avg1.toFixed(2)}×</strong></td></tr>
+            <tr><td>🟢 有信息共享</td><td>${p2.length?p2.map(r=>r.amplification+'×').join(', '):'未运行'}</td><td><strong>${avg2.toFixed(2)}×</strong></td></tr>
+        </table>
+        <p>${avg2>0 && avg1>avg2 ? '✅ 信息共享确实缓解了牛鞭效应！订货量波动幅度明显降低。' : ''}</p>
+        <div class="game-reflection"><h3>💡 思考题</h3><ol><li>信息共享为什么能减少牛鞭效应？</li><li>实际供应链中为什么企业仍然不愿意共享真实需求信息？</li><li>除了信息共享，还有哪些方法可以缓解牛鞭效应？</li></ol></div></div>`;
+
+    const area = document.getElementById('info-sharing-game');
+    area.innerHTML = html;
+    if (p1.length && p2.length) {
+        const score = Math.round(Math.min(100, Math.max(30, (avg1 - avg2) * 200 + 50)));
+        saveResult(score, {phase1: p1, phase2: p2, avg1, avg2});
+    }
+}
+
+// ============================================================
+// ch06: Facility Location
+// ============================================================
+function initFacilityLocation() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>📍 设施选址决策</h3>
+            <p>某电商企业需要在中国中部地区建设一个区域配送中心(RDC)。以下是三个候选城市评估数据：</p>
+            <table class="game-table">
+                <tr><th>指标</th><th>A-武汉</th><th>B-郑州</th><th>C-长沙</th></tr>
+                <tr><td>年运输成本(万元)</td><td>8.5</td><td>9.2</td><td>8.8</td></tr>
+                <tr><td>建设成本(万元)</td><td>200</td><td>180</td><td>190</td></tr>
+                <tr><td>劳动力素质(分)</td><td>75</td><td>70</td><td>80</td></tr>
+                <tr><td>市场通达性(分)</td><td>90</td><td>85</td><td>82</td></tr>
+            </table>
+            <div class="option-group">
+                <button class="btn btn-lg" onclick="runFacilityLocation('A')">A-武汉</button>
+                <button class="btn btn-lg" onclick="runFacilityLocation('B')">B-郑州</button>
+                <button class="btn btn-lg" onclick="runFacilityLocation('C')">C-长沙</button>
+            </div>
+            <div id="facility-result"></div></div>`;
+}
+
+async function runFacilityLocation(selected) {
+    const resp = await fetch('/api/practice/facility_location/evaluate', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({selected})
+    });
+    const data = await resp.json();
+    await saveResult(data.score, data);
+    document.getElementById('facility-result').innerHTML = `
+        <h3>📊 评估结果 (得分: ${data.score})</h3><p>${data.feedback}</p>
+        <table class="game-table"><tr><th>城市</th><th>运输成本</th><th>建设成本</th><th>总成本</th><th>劳动力</th><th>市场</th></tr>
+        ${data.comparison.map(c => `<tr class="${c.is_selected?'selected-row':''}"><td>${c.name}${c.is_selected?' ← 你的选择':''}</td><td>${c.transport_cost}</td><td>${c.construction_cost}</td><td>${c.total_cost}</td><td>${c.labor_quality}</td><td>${c.market_access}</td></tr>`).join('')}</table>`;
+}
+
+// ============================================================
+// ch07: Supplier Evaluation
+// ============================================================
+function initSupplierEval() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>🤝 供应商多准则评估</h3>
+            <p>5家供应商在五个维度的数据（0-100分制）：</p>
+            <table class="game-table">
+                <tr><th>供应商</th><th>价格</th><th>质量</th><th>交期</th><th>技术能力</th><th>售后服务</th></tr>
+                <tr><td>A</td><td>85</td><td>90</td><td>78</td><td>82</td><td>88</td></tr>
+                <tr><td>B</td><td>92</td><td>75</td><td>88</td><td>70</td><td>80</td></tr>
+                <tr><td>C</td><td>70</td><td>95</td><td>90</td><td>95</td><td>92</td></tr>
+                <tr><td>D</td><td>80</td><td>80</td><td>95</td><td>75</td><td>75</td></tr>
+                <tr><td>E</td><td>95</td><td>70</td><td>72</td><td>88</td><td>70</td></tr>
+            </table>
+            <h4>设置维度权重（百分比，总和应为100%）：</h4>
+            <div class="weights-grid">` +
+            [{k:'price',l:'价格',v:20},{k:'quality',l:'质量',v:30},{k:'delivery',l:'交期',v:20},{k:'tech',l:'技术能力',v:15},{k:'service',l:'售后服务',v:15}]
+            .map(w => `<div class="weight-item"><label>${w.l}</label><input type="range" min="0" max="50" value="${w.v}" id="w-${w.k}" oninput="updateWeights()"><span id="v-${w.k}">${w.v}%</span></div>`).join('') +
+            `</div><p id="weight-total" style="color:green">总和：100%</p>
+            <button class="btn btn-primary btn-lg" onclick="runSupplierEval()">计算排名</button>
+            <div id="supplier-result"></div></div>`;
+}
+
+function updateWeights() {
+    const keys = ['price','quality','delivery','tech','service'];
+    let total = 0;
+    keys.forEach(k => { const v = parseInt(document.getElementById('w-'+k).value); document.getElementById('v-'+k).textContent = v+'%'; total += v; });
+    const el = document.getElementById('weight-total');
+    el.textContent = '总和：'+total+'%';
+    el.style.color = total===100?'green':'red';
+}
+
+async function runSupplierEval() {
+    const weights = {price:parseInt(document.getElementById('w-price').value),quality:parseInt(document.getElementById('w-quality').value),delivery:parseInt(document.getElementById('w-delivery').value),tech:parseInt(document.getElementById('w-tech').value),service:parseInt(document.getElementById('w-service').value)};
+    const resp = await fetch('/api/practice/supplier_eval/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({weights})});
+    const data = await resp.json();
+    await saveResult(data.match_score, {weights});
+    document.getElementById('supplier-result').innerHTML = `<h3>📊 (匹配度: ${data.match_score}%)</h3><p>${data.analysis}</p><h4>你的排名：</h4><ol>${data.student_ranking.map(s=>'<li>'+s.name+'：'+s.score+'分</li>').join('')}</ol><h4>专家基准排名：</h4><ol>${data.expert_ranking.map(s=>'<li>'+s.name+'：'+s.score+'分</li>').join('')}</ol>`;
+}
+
+// ============================================================
+// ch08: Postponement
+// ============================================================
+function initPostponement() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>🎨 延迟策略设计</h3>
+            <p>一家跨国服装企业同时销售欧洲和美国市场。生产"通用白牌服装"后需完成最后的差异化（尺码标签、包装、语言说明）。<strong>推-拉边界应设在哪个环节？</strong></p>
+            <div class="option-group-vertical">
+                <button class="btn btn-lg option-btn" onclick="runPostponement('factory')"><strong>A-在工厂完成所有差异化</strong><span>全球库存分离，各市场独立管理。纯Push模式。</span></button>
+                <button class="btn btn-lg option-btn" onclick="runPostponement('dc')"><strong>B-在区域DC完成差异化 (延迟策略)</strong><span>通用白牌服装推至区域DC，根据当地需求进最终加工。库存可跨市场调拨。</span></button>
+                <button class="btn btn-lg option-btn" onclick="runPostponement('store')"><strong>C-在门店完成差异化</strong><span>完全Pull，门店现场打印标签。库存风险最低但门店效率受影响。</span></button>
+            </div>
+            <div id="postponement-result"></div></div>`;
+}
+
+async function runPostponement(boundary) {
+    const resp = await fetch('/api/practice/postponement/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({boundary,reasoning:'选择'})});
+    const data = await resp.json();
+    await saveResult(data.score, {boundary});
+    document.getElementById('postponement-result').innerHTML = `<h3>📊 决策评估 (得分: ${data.score})</h3><p>方案：<strong>${data.name}</strong></p><p>${data.analysis}</p>`;
+}
+
+// ============================================================
+// ch09: Pricing
+// ============================================================
+function initPricingSim() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>💰 需求-价格弹性模拟</h3>
+            <p>产品单位成本50元，基准价格80元时销量1000件。价格弹性-1.5。</p>
+            <div class="game-action"><label>尝试不同价格（元）：</label><input type="number" id="sim-price" value="100" min="50" max="300"><button class="btn btn-primary btn-lg" onclick="runPricingSim()">模拟</button></div>
+            <div id="pricing-result"></div><div class="chart-container"><canvas id="pricing-chart"></canvas></div></div>`;
+}
+
+async function runPricingSim() {
+    const price = parseFloat(document.getElementById('sim-price').value) || 100;
+    const resp = await fetch('/api/practice/pricing/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({price})});
+    const data = await resp.json();
+    document.getElementById('pricing-result').innerHTML = `<h3>📊 模拟结果</h3><table class="game-table"><tr><td>售价</td><td>${data.price}元</td></tr><tr><td>需求</td><td>${data.demand}件</td></tr><tr><td>利润</td><td><strong>¥${data.profit}</strong></td></tr><tr><td>最优利润</td><td>¥${data.optimal_profit} (价格=${data.optimal_price})</td></tr><tr><td>效率</td><td>${data.efficiency}%</td></tr></table>`;
+    const prices=[],profits=[];
+    for(let p=55;p<=280;p+=5){prices.push(p);const d=Math.round(1000*Math.pow(80/p,1.5));profits.push(p*d-50*d);}
+    new Chart(document.getElementById('pricing-chart').getContext('2d'),{type:'line',data:{labels:prices,datasets:[{label:'利润曲线',data:profits,borderColor:'#FF5722'}]},options:{responsive:true,plugins:{title:{display:true,text:'定价-利润曲线'}}}});
+}
+
+// ============================================================
+// ch10: Make or Buy
+// ============================================================
+function initMakeOrBuy() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `
+        <div class="content-card">
+            <h3>🏭 自制vs外购决策</h3>
+            <p>年需求预期12000件。<strong>自制：</strong>固定投入50万/年+变动成本35元/件。<strong>外购：</strong>单价65元/件。</p>
+            <p>提示：盈亏平衡点 = 固定成本 / (外购单价 - 自制变动成本)</p>
+            <div class="game-action"><label>盈亏平衡点（件）：</label><input type="number" id="be-result" placeholder="输入件数" min="0" step="100"><button class="btn btn-primary btn-lg" onclick="runMakeOrBuy()">提交</button></div>
+            <div id="makebuy-result"></div></div>`;
+}
+
+async function runMakeOrBuy() {
+    const be = parseFloat(document.getElementById('be-result').value) || 0;
+    const resp = await fetch('/api/practice/make_or_buy/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({breakeven:be})});
+    const data = await resp.json();
+    await saveResult(data.score, data);
+    document.getElementById('makebuy-result').innerHTML = `<h3>📊 (得分: ${data.score})</h3><p>你的答案：${data.student_breakeven}件 | 正确答案：${data.correct_breakeven}件</p><p>公式：${data.formula}</p><p>${data.feedback}</p>`;
+}
+
+// ============================================================
+// ch11: Beer Game (includes render/play/results)
+// ============================================================
+function renderBeerGame(state) {
+    const area = document.getElementById('practice-area');
+    if (state.game_over) { showBeerGameResults(state); return; }
+    area.innerHTML = `<div class="beer-game"><div class="game-header"><h3>🍺 啤酒游戏——第 ${state.round+1}/${state.max_rounds} 轮</h3><p>你是零售商。订货后2周到货。目标：满足需求+最小化成本。</p></div>
+        <div class="game-stats"><div class="stat-card"><div class="stat-value">${state.current_demand}</div><div class="stat-label">本周需求</div></div><div class="stat-card"><div class="stat-value">${state.inventory}</div><div class="stat-label">当前库存</div></div><div class="stat-card"><div class="stat-value">${state.pending_orders[0]}</div><div class="stat-label">下周到货</div></div><div class="stat-card"><div class="stat-value">¥${state.total_cost}</div><div class="stat-label">累计成本</div></div></div>
+        <div class="game-info"><p>📦 持有成本：5元/箱/周 | 📉 缺货成本：20元/箱 | 历史需求：${state.demand_history.join('→')}</p></div>
+        <div class="game-action"><label>订货量（箱）：</label><input type="number" id="order-qty" value="${Math.round(state.current_demand)}" min="0" max="500"><button class="btn btn-primary btn-lg" onclick="playBeerGameRound()">确认订货</button></div></div>`;
+}
+
+async function playBeerGameRound() {
+    const orderQty = parseInt(document.getElementById('order-qty').value) || 100;
+    const initResp = await fetch('/api/practice/beer_game/init',{method:'POST'});
+    let state = await initResp.json();
+    const history = JSON.parse(sessionStorage.getItem('beer_game_history')||'[]');
+    state.round = history.length;
+    state.total_cost = history.reduce((s,h)=>s+h.round_cost,0);
+    const playResp = await fetch('/api/practice/beer_game/play',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...state,order_qty:orderQty,inventory:history.length>0?history[history.length-1].ending_inventory:state.inventory,pending_orders:history.length>0?history[history.length-1].pending_orders:state.pending_orders,current_demand:history.length>0?history[history.length-1].next_demand:state.current_demand,demand_history:history.length>0?history[history.length-1].demand_history||state.demand_history:state.demand_history})});
+    const result = await playResp.json();
+    history.push(result);
+    sessionStorage.setItem('beer_game_history',JSON.stringify(history));
+    if (result.game_over) {
+        const avgCost = history.reduce((s,h)=>s+h.round_cost,0)/history.length;
+        await saveResult(Math.round(Math.min(100,Math.max(0,100-avgCost/5))),{rounds:history});
+        showBeerGameResults({history,total_cost:result.total_cost});
+    } else {
+        renderBeerGame({...state,round:result.round,inventory:result.ending_inventory,current_demand:result.next_demand,pending_orders:result.pending_orders,total_cost:result.total_cost,game_over:false,demand_history:[...state.demand_history,state.current_demand]});
+    }
+}
+
+function showBeerGameResults(data) {
+    const hist = data.history||[];
+    document.getElementById('practice-area').innerHTML = `<div class="beer-game"><div class="game-header"><h3>🍺 游戏结束！</h3><p>观察订货量波动 vs 需求波动——这是牛鞭效应。</p></div>
+        <table class="game-table"><tr><th>轮次</th><th>需求</th><th>订货量</th><th>到货量</th><th>期末库存</th><th>缺货</th><th>成本</th></tr>${hist.map((h,i)=>`<tr><td>${i+1}</td><td>${h.demand}</td><td>${h.order_qty}</td><td>${h.arrival}</td><td>${h.ending_inventory}</td><td>${h.stockout}</td><td>¥${h.round_cost}</td></tr>`).join('')}<tr class="total-row"><td colspan="6"><strong>累计总成本</strong></td><td><strong>¥${data.total_cost}</strong></td></tr></table>
+        <div class="chart-container"><canvas id="beer-chart"></canvas></div>
+        <div class="game-reflection"><h3>💡 思考题</h3><ol><li>为什么你的订货量波动远大于实际需求？</li><li>如果上游能看到终端真实需求，结果会如何？</li><li>提前期从2周缩到1周会有什么影响？</li></ol></div>
+        <button class="btn btn-outline" onclick="sessionStorage.removeItem('beer_game_history');fetch('/api/practice/beer_game/init',{method:'POST'}).then(r=>r.json()).then(s=>renderBeerGame(s))">🔄 重新挑战</button>
+        <a href="/chapter/ch11_inventory" class="btn btn-outline">返回章节</a></div>`;
+    new Chart(document.getElementById('beer-chart').getContext('2d'),{type:'line',data:{labels:hist.map((_,i)=>`第${i+1}轮`),datasets:[{label:'实际需求',data:hist.map(h=>h.demand),borderColor:'#4CAF50',tension:0.3},{label:'你的订货量',data:hist.map(h=>h.order_qty),borderColor:'#FF5722',tension:0.3},{label:'库存水平',data:hist.map(h=>h.ending_inventory),borderColor:'#2196F3',tension:0.3}]},options:{responsive:true,plugins:{title:{display:true,text:'牛鞭效应可视化'}}}});
+}
+
+// ============================================================
+// ch12: Delivery Route
+// ============================================================
+function initDeliveryRoute() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `<div class="content-card"><h3>🚚 配送路线优化</h3><p>车辆从DC出发，访问A/B/C/D/E各一次后返回DC。距离矩阵：</p>
+        <table class="game-table"><tr><th></th><th>DC</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr><tr><td>DC</td><td>-</td><td>25</td><td>30</td><td>20</td><td>35</td><td>40</td></tr><tr><td>A</td><td>25</td><td>-</td><td>45</td><td>30</td><td>55</td><td>40</td></tr><tr><td>B</td><td>30</td><td>45</td><td>-</td><td>35</td><td>25</td><td>50</td></tr><tr><td>C</td><td>20</td><td>30</td><td>35</td><td>-</td><td>40</td><td>35</td></tr><tr><td>D</td><td>35</td><td>55</td><td>25</td><td>40</td><td>-</td><td>30</td></tr><tr><td>E</td><td>40</td><td>40</td><td>50</td><td>35</td><td>30</td><td>-</td></tr></table>
+        <p>格式：<code>DC-C-E-D-B-A-DC</code></p>
+        <div class="game-action"><input type="text" id="route-input" placeholder="DC-C-E-D-B-A-DC" style="width:300px;font-size:16px"><button class="btn btn-primary btn-lg" onclick="runDeliveryRoute()">计算</button></div>
+        <div id="route-result"></div></div>`;
+}
+
+async function runDeliveryRoute() {
+    const raw = document.getElementById('route-input').value.trim();
+    const route = raw.split('-').map(s=>s.trim().toUpperCase());
+    const resp = await fetch('/api/practice/delivery_route/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({route})});
+    const data = await resp.json();
+    if (data.error) { alert(data.error); return; }
+    await saveResult(data.score, data);
+    document.getElementById('route-result').innerHTML = `<h3>📊 (得分: ${data.score})</h3><p>你的路线：${data.student_distance}km | 最优：${data.optimal_route}(${data.optimal_distance}km) | 效率：${data.efficiency}%</p><p>${data.feedback}</p>`;
+}
+
+// ============================================================
+// ch13: Information Value
+// ============================================================
+function initInfoValue() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `<div class="content-card"><h3>📡 信息价值演示</h3><p>对比分散信息vs集中信息下，三级供应链的需求放大程度。</p>
+        <div class="game-action"><label>终端需求：</label><input type="number" id="info-demand" value="100" min="50" max="200"><button class="btn btn-primary btn-lg" onclick="runInfoValue('decentralized')">🔴 分散信息</button><button class="btn btn-outline btn-lg" onclick="runInfoValue('centralized')">🟢 集中信息(共享)</button></div>
+        <div id="info-value-result"></div></div>`;
+}
+
+async function runInfoValue(scenario) {
+    const demand = parseInt(document.getElementById('info-demand').value) || 100;
+    const resp = await fetch('/api/practice/info_value/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario,demand})});
+    const data = await resp.json();
+    document.getElementById('info-value-result').innerHTML = `<h3>📊 ${data.scenario_label}</h3>
+        <table class="game-table"><tr><th>环节</th><th>订单量</th><th>放大系数</th></tr><tr><td>需求</td><td>${data.demand}</td><td>1.00×</td></tr><tr><td>零售商</td><td>${data.retailer_order}</td><td>${data.amplification.retailer}×</td></tr><tr><td>批发商</td><td>${data.wholesaler_order}</td><td>${data.amplification.wholesaler}×</td></tr><tr><td>制造商</td><td>${data.manufacturer_order}</td><td>${data.amplification.manufacturer}×</td></tr></table>
+        <p>牛鞭指数：<strong>${data.bullwhip_index.toFixed(2)}</strong> | 总成本：¥${data.total_cost}</p>`;
+}
+
+// ============================================================
+// ch14: Production Schedule
+// ============================================================
+function initProductionSchedule() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `<div class="content-card"><h3>🏭 主生产排程</h3><p>每周40小时。3种产品数据：A-需求300/换产2h/利润50元/产能30件h；B-需求200/换产1.5h/利润80元/产能25件h；C-需求500/换产0.5h/利润30元/产能40件h。</p>
+        <p>输入排程（如 <code>A:12,B:9.5,C:13</code> 意为A生产12h→B生产9.5h→C生产13h）：</p>
+        <div class="game-action"><input type="text" id="schedule-input" placeholder="B:9.5,C:13,A:15" style="width:250px;font-size:16px"><button class="btn btn-primary btn-lg" onclick="runProductionSchedule()">计算利润</button></div>
+        <div id="schedule-result"></div></div>`;
+}
+
+async function runProductionSchedule() {
+    const raw = document.getElementById('schedule-input').value.trim();
+    const schedule = raw.split(',').map(s=>{const[p,h]=s.split(':');return{product:p.trim().toUpperCase(),hours:parseFloat(h)||0}}).filter(s=>s.hours>0);
+    const resp = await fetch('/api/practice/production_schedule/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({schedule})});
+    const data = await resp.json();
+    await saveResult(data.score, {schedule});
+    document.getElementById('schedule-result').innerHTML = `<h3>📊 排产结果 (得分: ${data.score})</h3><p>总利润：<strong>¥${data.total_profit}</strong> | 最优利润：¥${data.optimal_profit} | 效率：${data.efficiency}%</p>${data.details.map(d=>`<p>${d.product}：生产${d.produced}件，利润¥${d.profit}，换产${d.setup}h</p>`).join('')}<p>${data.advice}</p>`;
+}
+
+// ============================================================
+// ch15: Risk Scenario
+// ============================================================
+function initRiskScenario() {
+    const area = document.getElementById('practice-area');
+    area.innerHTML = `<div class="content-card"><h3>⚠️ 供应链中断应急</h3>
+        <div class="scenario-box"><p><strong>情景：</strong>核心芯片供应商因自然灾害停产，库存仅维持3周。新供应商认证需8周。客户订单必须按时交付。</p></div>
+        <div class="option-group-vertical">
+            <button class="btn btn-lg option-btn" onclick="runRiskScenario('A')"><strong>A-紧急现货采购</strong><span>溢价200%，1周内恢复。成本飙升但供应安全。</span></button>
+            <button class="btn btn-lg option-btn" onclick="runRiskScenario('B')"><strong>B-协商延迟交付</strong><span>等新供应商认证(8周)。不增加成本但客户关系受损。</span></button>
+            <button class="btn btn-lg option-btn" onclick="runRiskScenario('C')"><strong>C-混合策略</strong><span>现货采购满足关键客户+协商非关键客户延迟。溢价100%，1周恢复关键客户。</span></button>
+        </div><div id="risk-result"></div></div>`;
+}
+
+async function runRiskScenario(choice) {
+    const resp = await fetch('/api/practice/risk_scenario/evaluate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({choice})});
+    const data = await resp.json();
+    await saveResult(data.score, data);
+    document.getElementById('risk-result').innerHTML = `<h3>📊 (得分: ${data.score})</h3><p>你选了：<strong>${data.name}</strong></p><p>${data.analysis}</p>${Object.entries(data.all_options).map(([k,v])=>`<div class="content-card" style="border-left:4px solid ${k===choice?'#2196F3':'#ddd'}"><strong>${k}-${v.name}</strong> | ${v.cost} | ${v.recovery} | ${v.risk}</div>`).join('')}`;
+}
+
+// ============================================================
+// ch16: SCOR KPI
+// ============================================================
+function initScorKpi() {
+    const area = document.getElementById('practice-area');
+    const dims = {plan:'计划(Plan)',source:'采购(Source)',make:'制造(Make)',deliver:'交付(Deliver)',return:'退货(Return)'};
+    area.innerHTML = `<div class="content-card"><h3>📊 SCOR KPI设计</h3><p>为一家快消食品电商设计供应链绩效看板。SCOR模型五个维度，每个维度选2个核心KPI：</p>
+        ${Object.entries(dims).map(([k,v]) => `<div class="form-group"><label><strong>${v}</strong></label><input type="text" id="kpi-${k}-1" placeholder="KPI 1（如：需求预测准确率）"><input type="text" id="kpi-${k}-2" placeholder="KPI 2" style="margin-top:4px"></div>`).join('')}
+        <button class="btn btn-primary btn-lg" onclick="runScorKpi()">提交KPI方案</button><div id="scor-result"></div></div>`;
+}
+
+async function runScorKpi() {
+    const kpis = {};
+    ['plan','source','make','deliver','return'].forEach(k => {
+        kpis[k] = [document.getElementById('kpi-'+k+'-1')?.value||'', document.getElementById('kpi-'+k+'-2')?.value||''];
+    });
+    const resp = await fetch('/api/practice/scor_kpi/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kpis})});
+    const data = await resp.json();
+    await saveResult(data.score, {kpis});
+    document.getElementById('scor-result').innerHTML = `<h3>📊 评估结果 (得分: ${data.score})</h3><pre style="white-space:pre-wrap">${data.feedback}</pre><h4>SCOR标准指标参考：</h4>${Object.entries(data.reference).map(([k,v])=>`<p><strong>${v.label}：</strong>${v.recommended[0]}（${v.formulas[0]}）、${v.recommended[1]}（${v.formulas[1]}）</p>`).join('')}`;
+}
+
+</script>
+</body>
+</html>

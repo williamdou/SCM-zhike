@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生详情 - SCM智课教师端</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-left">
+            <a href="{{ url_for('teacher_dashboard') }}" class="nav-brand">← 返回管理面板</a>
+            <span class="nav-subtitle">学生详情：{{ student.realname }}</span>
+        </div>
+        <div class="nav-right">
+            <span class="nav-user">👤 {{ session.get('realname') }}（教师）</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline">退出</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Student info -->
+        <div class="content-card">
+            <h3>👨‍🎓 {{ student.realname }}</h3>
+            <table class="data-table">
+                <tr><td>用户名</td><td>{{ student.username }}</td></tr>
+                <tr><td>学号</td><td>{{ student.student_id or '-' }}</td></tr>
+                <tr><td>学校</td><td>{{ student.school or '-' }}</td></tr>
+                <tr><td>院系</td><td>{{ student.department or '-' }}</td></tr>
+                <tr><td>注册时间</td><td>{{ student.created_at[:16] }}</td></tr>
+            </table>
+        </div>
+
+        <!-- Practice results -->
+        <div class="content-card">
+            <h3>🎮 实践任务记录</h3>
+            {% if practices %}
+            <table class="data-table">
+                <tr><th>章节</th><th>任务</th><th>得分</th><th>时间</th></tr>
+                {% for p in practices %}
+                <tr>
+                    <td>{{ p.chapter }}</td>
+                    <td>{{ p.task_name }}</td>
+                    <td><strong>{{ p.score }}</strong></td>
+                    <td>{{ p.created_at[:16] }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="text-muted">暂无实践记录</p>
+            {% endif %}
+        </div>
+
+        <!-- Activity log -->
+        <div class="content-card">
+            <h3>📋 活动日志（最近50条）</h3>
+            {% if activities %}
+            <table class="data-table">
+                <tr><th>时间</th><th>章节</th><th>动作</th><th>详情</th></tr>
+                {% for a in activities %}
+                <tr>
+                    <td>{{ a.created_at[:16] }}</td>
+                    <td>{{ a.chapter }}</td>
+                    <td>{{ a.action }}</td>
+                    <td>{{ a.detail[:60] if a.detail else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="text-muted">暂无活动记录</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
