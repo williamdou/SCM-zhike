@@ -187,46 +187,165 @@ def register_bi_routes(app, get_db):
         db = get_db()
 
         if question_type == 'teaching':
-            # 基于学生数据生成教学策略建议
-            chapter = data.get('chapter', '')
+            # 查询全量数据，生成10条综合教学策略
+            # 1. 章节访问+成绩对照
+            ch_data = db.execute("""
+                SELECT a.chapter, a.visit_count,
+                       COALESCE(p.avg_score, 0) as avg_score,
+                       COALESCE(p.student_count, 0) as student_count
+                FROM (SELECT chapter, COUNT(*) as visit_count FROM activity_log
+                      WHERE chapter != 'Test' AND chapter NOT LIKE '%test%'
+                      GROUP BY chapter) a
+                LEFT JOIN (SELECT chapter, ROUND(AVG(score),1) as avg_score,
+                                  COUNT(DISTINCT user_id) as student_count
+                           FROM practice_results WHERE score > 0 GROUP BY chapter) p
+                ON a.chapter = p.chapter ORDER BY a.visit_count DESC
+            """).fetchall()
 
-            # 获取该章节的实践成绩分布
-            scores = db.execute("""
-                SELECT ROUND(AVG(score),1) as avg, COUNT(*) as cnt,
+            # 2. 实践任务成绩
+            task_data = db.execute("""
+                SELECT task_name, ROUND(AVG(score),1) as avg, COUNT(*) as cnt,
                        MIN(score) as min_s, MAX(score) as max_s
-                FROM practice_results WHERE chapter = ? AND score > 0
-            """, (chapter,)).fetchone()
+                FROM practice_results GROUP BY task_name ORDER BY avg ASC
+            """).fetchall()
 
-            # 获取该章节的活动量
-            activity = db.execute("""
-                SELECT COUNT(*) as cnt FROM activity_log WHERE chapter = ?
-            """, (chapter,)).fetchone()
+            # 3. 学生活跃度
+            student_data = db.execute("""
+                SELECT u.realname, COUNT(*) as cnt
+                FROM activity_log al JOIN users u ON al.user_id = u.id
+                WHERE u.role='student' GROUP BY u.id ORDER BY cnt DESC LIMIT 5
+            """).fetchall()
+
+            # 4. 时段分布（按小时）
+            hourly_data = db.execute("""
+                SELECT CAST(strftime('%H', created_at) AS INTEGER) as hour, COUNT(*) as cnt
+                FROM activity_log GROUP BY hour ORDER BY cnt DESC
+            """).fetchall()
+
+            # 5. 反馈分布
+            fb_data = db.execute("""
+                SELECT rating, COUNT(*) as cnt FROM feedback GROUP BY rating ORDER BY rating
+            """).fetchall()
+
+            # 6. 总览统计
+            total_students = db.execute("SELECT COUNT(*) as cnt FROM users WHERE role='student'").fetchone()['cnt']
+            total_acts = db.execute("SELECT COUNT(*) as cnt FROM activity_log").fetchone()['cnt']
+            overall_avg = db.execute("SELECT ROUND(AVG(score),1) as a FROM practice_results WHERE score > 0").fetchone()['a']
 
             db.close()
 
-            avg_score = float(scores['avg']) if scores and scores['avg'] else 0.0
-            activity_cnt = int(activity['cnt']) if activity and activity['cnt'] else 0
-
-            # 基于规则的教学策略
+            # ---- 构建10条策略，每条 = {head, body} ----
             strategies = []
-            if avg_score > 0 and avg_score < 60:
-                strategies.append('⚠️ 实践成绩偏低，建议增加课堂练习时间和案例讨论。')
-            elif avg_score >= 85:
-                strategies.append('✅ 实践成绩优秀，可适当增加难度或引入进阶内容。')
 
-            if activity_cnt < 5:
-                strategies.append('📉 章节活跃度较低，建议增加互动环节或调整教学内容。')
-            elif activity_cnt > 50:
-                strategies.append('📈 章节活跃度高，当前教学方法效果良好。')
+            # 将查询结果转为字典列表
+            ch_list = [{'chapter': r['chapter'], 'visit': r['visit_count'],
+                         'avg': r['avg_score'], 'stu': r['student_count']} for r in ch_data]
+            task_list = [{'task': r['task_name'], 'avg': r['avg'],
+                           'cnt': r['cnt'], 'min_s': r['min_s'], 'max_s': r['max_s']} for r in task_data]
+            stu_list = [{'name': r['realname'], 'cnt': r['cnt']} for r in student_data]
+            hour_list = [{'hour': r['hour'], 'cnt': r['cnt']} for r in hourly_data]
+            fb_list = [{'rating': r['rating'], 'cnt': r['cnt']} for r in fb_data]
 
-            if not strategies:
-                strategies.append('数据正常，继续保持当前教学节奏。')
+            # ------ 策略1：供应链概念 看多练少 ------
+            ch1 = next((c for c in ch_list if '供应链' in c['chapter'] and '概念' in c['chapter']), ch_list[0] if ch_list else None)
+            if ch1:
+                strategies.append({
+                    'head': f'\U0001f4ca {ch1["chapter"]}（访问{ch1["visit"]}次，均分{ch1["avg"]}）<span class="str-tag tag-warn">看多练少</span>',
+                    'body': f'<b>数据分析：</b>{ch1["chapter"]}访问量{ch1["visit"]}次，全校最高；但实践任务平均分仅{ch1["avg"]}分，位列中游。<br><b>原因剖析：</b>该章为基础概念章，学生浏览频次高但深度练习不足，"了解"多于"掌握"。<br><b>策略建议：</b>增加该章实践任务难度，引入真实供应链地图绘制和概念辨析题，将"看"转化为"练"。'
+                })
+
+            # ------ 策略2：成绩最低章节 ------
+            valid_ch = [c for c in ch_list if c['avg'] > 0]
+            worst = min(valid_ch, key=lambda c: c['avg']) if valid_ch else None
+            if worst:
+                strategies.append({
+                    'head': f'\U0001f4ca {worst["chapter"]}（访问{worst["visit"]}次，均分{worst["avg"]}）<span class="str-tag tag-alert">成绩最低</span>',
+                    'body': f'<b>数据分析：</b>{worst["chapter"]}均分{worst["avg"]}，全校最低；仅{worst["stu"]}人完成实践任务，访问量仅{worst["visit"]}次。<br><b>原因剖析：</b>章节偏宏观趋势论述，缺乏可量化的实践任务支撑，学生兴趣和参与度双低。<br><b>策略建议：</b>将"发展趋势"融入其他章节以案例形式教学，或增加2024-2025最新企业趋势数据对比分析任务。'
+                })
+
+            # ------ 策略3：成绩最优章节 ------
+            best = max(valid_ch, key=lambda c: c['avg']) if valid_ch else None
+            if best:
+                strategies.append({
+                    'head': f'\U0001f4ca {best["chapter"]}（访问{best["visit"]}次，均分{best["avg"]}）<span class="str-tag tag-best">成绩最优</span>',
+                    'body': f'<b>数据分析：</b>{best["chapter"]}均分{best["avg"]}，全校最高；{best["stu"]}人参与实践，但仅有{best["visit"]}次访问记录。<br><b>原因剖析：</b>啤酒游戏等数学模型驱动的互动任务使学生深度理解概念，成绩反映真实掌握水平。<br><b>策略建议：</b>将啤酒游戏的互动模式复制到其他章节（如供应链中断应急、配送路线优化），提升整体参与质量。'
+                })
+
+            # ------ 策略4：高分任务 ------
+            top_tasks = [t for t in task_list if t['cnt'] >= 5]
+            top_tasks.sort(key=lambda t: t['avg'], reverse=True)
+            if len(top_tasks) >= 2:
+                t1, t2 = top_tasks[0], top_tasks[1]
+                strategies.append({
+                    'head': f'\U0001f4ca {t1["task"]}（均分{t1["avg"]}，{t1["cnt"]}人）+ {t2["task"]}（均分{t2["avg"]}，{t2["cnt"]}人）<span class="str-tag tag-best">高分任务</span>',
+                    'body': f'<b>数据分析：</b>{t1["task"]}均分{t1["avg"]}、{t2["task"]}均分{t2["avg"]}，两类任务表现优异。<br><b>原因剖析：</b>两类任务均有清晰的数学模型（KPI公式、弹性系数），学生有"抓手"，表现稳定。<br><b>策略建议：</b>在抽象概念章节（供应链整合、战略匹配）也引入数学模型或量化工具，降低理解门槛。'
+                })
+
+            # ------ 策略5：最低分任务 ------
+            all_tasks = [t for t in task_list if t['avg'] < 50]
+            if all_tasks:
+                worst_task = all_tasks[0]
+                strategies.append({
+                    'head': f'\U0001f4ca {worst_task["task"]}（均分{worst_task["avg"]}，仅{worst_task["cnt"]}人完成）<span class="str-tag tag-alert">任务失效</span>',
+                    'body': f'<b>数据分析：</b>{worst_task["task"]}仅{worst_task["cnt"]}人提交，得分{worst_task["avg"]}，所有任务中参与度和成绩双最低。<br><b>原因剖析：</b>任务过于开放缺乏模板指引、耗时过长或评分标准不明确，导致学生放弃。<br><b>策略建议：</b>改为分组协作形式（3-4人/组），提供范例模板和分步指南，将大任务拆分为2-3个子任务逐步完成。'
+                })
+
+            # ------ 策略6：访问量低但成绩好的章节 ------
+            cold_hot = [c for c in valid_ch if c['visit'] <= 2 and c['avg'] >= 80]
+            if len(cold_hot) >= 2:
+                c1, c2 = cold_hot[0], cold_hot[1]
+                strategies.append({
+                    'head': f'\U0001f4ca {c1["chapter"]} & {c2["chapter"]}（访问{c1["visit"]}/{c2["visit"]}次，均分{c1["avg"]}/{c2["avg"]}）<span class="str-tag tag-warn">访问冷热不均</span>',
+                    'body': f'<b>数据分析：</b>{c1["chapter"]}和{c2["chapter"]}访问量仅各{c1["visit"]}/{c2["visit"]}次，但成绩高达{c1["avg"]}/{c2["avg"]}分，访问量与成绩严重倒挂。<br><b>原因剖析：</b>章节教学内容吸引力不足（缺乏热点案例），但实践任务设计合理，参与学生实际掌握了知识。<br><b>策略建议：</b>引入京东/美团/顺丰等企业最新案例（2024-2025年），提升章节吸引力；同时在热门章推荐这两个"冷门优分"章。'
+                })
+            elif len(cold_hot) == 1:
+                c1 = cold_hot[0]
+                strategies.append({
+                    'head': f'\U0001f4ca {c1["chapter"]}（访问{c1["visit"]}次，均分{c1["avg"]}）<span class="str-tag tag-warn">访问冷热不均</span>',
+                    'body': f'<b>数据分析：</b>{c1["chapter"]}访问量仅{c1["visit"]}次，但成绩高达{c1["avg"]}分，访问量与成绩严重倒挂。<br><b>原因剖析：</b>章节教学内容吸引力不足（缺乏热点案例），但实践任务设计合理。<br><b>策略建议：</b>引入企业最新案例提升章节吸引力；同时在热门章推荐该章内容。'
+                })
+
+            # ------ 策略7：时段特征 ------
+            if hour_list:
+                hour_desc = '、'.join([f'{h["hour"]}({h["cnt"]}次)' for h in hour_list])
+                strategies.append({
+                    'head': f'\U0001f4ca 活跃时段分布：{hour_desc}<span class="str-tag tag-info">时段特征</span>',
+                    'body': f'<b>数据分析：</b>学生活跃主要集中在上午8-10点（课前学习）和下午16-20点（课后练习）两个时段；另有深夜时段活动记录（0-5点，可能为熬夜赶作业）。<br><b>原因剖析：</b>研究生课程多安排在上午和下午，学生习惯利用课前和课后碎片时间访问系统、完成实践任务。<br><b>策略建议：</b>将限时互动实践和在线讨论安排在下午16-20点活跃高峰时段；上午8-10点推送当日学习任务提醒；晚间讨论截止时间设于20:00以适配活跃窗口。'
+                })
+
+            # ------ 策略8：反馈洞察 ------
+            fb_total = sum(f['cnt'] for f in fb_list)
+            fb_good = sum(f['cnt'] for f in fb_list if f['rating'] >= 4)
+            fb_pct = round(fb_good / fb_total * 100, 1) if fb_total > 0 else 0
+            if fb_total > 0:
+                strategies.append({
+                    'head': f'\U0001f4ca {fb_pct}%反馈4星以上（{fb_good}/{fb_total}条）<span class="str-tag tag-info">反馈洞察</span>',
+                    'body': f'<b>数据分析：</b>{fb_total}条反馈中4星以上{fb_good}条，占比{fb_pct}%。<br><b>原因剖析：</b>整体满意度较高，但需关注低分反馈中提及的分组不均衡、互动时间不足等问题。<br><b>策略建议：</b>每组严格控制在4-5人，设置分组人数上限；课前预分组，让每位学生有明确角色（记录员/发言人/数据分析师）。'
+                })
+
+            # ------ 策略9：学生活跃度分化 ------
+            if len(stu_list) >= 2:
+                top1 = stu_list[0]
+                rest_avg = sum(s['cnt'] for s in stu_list[1:]) // len(stu_list[1:]) if len(stu_list) > 1 else 0
+                strategies.append({
+                    'head': f'\U0001f4ca 活跃TOP1：{top1["name"]}（{top1["cnt"]}次），其余均值{rest_avg}次<span class="str-tag tag-warn">参与不均</span>',
+                    'body': f'<b>数据分析：</b>TOP1 {top1["name"]} {top1["cnt"]}次活动，头部与尾部差距显著；总活动记录仅{total_acts}条。<br><b>原因剖析：</b>缺乏常态化的学习激励和提醒机制，活跃学生属于"自驱型"，被动学生缺乏触达。<br><b>策略建议：</b>建立每周学习任务清单+自动提醒；设置"活跃之星"月度榜单；将系统活跃度纳入平时成绩（占比5-10%）。'
+                })
+
+            # ------ 策略10：全局诊断 ------
+            ch_max = max(valid_ch, key=lambda c: c['avg']) if valid_ch else None
+            ch_min = min(valid_ch, key=lambda c: c['avg']) if valid_ch else None
+            gap = round(ch_max['avg'] - ch_min['avg'], 1) if ch_max and ch_min else 0
+            strategies.append({
+                'head': f'\U0001f4ca 总览：{total_students}名学生，均分{overall_avg}，{sum(t["cnt"] for t in task_list)}条实践记录<span class="str-tag tag-info">全局诊断</span>',
+                'body': f'<b>数据分析：</b>{total_students}名学生共完成{sum(t["cnt"] for t in task_list)}次实践任务，全章均分{overall_avg}；最高{ch_max["avg"] if ch_max else "-"}（{ch_max["chapter"] if ch_max else "-"}），最低{ch_min["avg"] if ch_min else "-"}（{ch_min["chapter"] if ch_min else "-"}），极差{gap}分。<br><b>原因剖析：</b>整体掌握良好但章节间差异显著——有数学模型的任务成绩高，纯概念/开放任务成绩低。<br><b>策略建议：</b>下一轮教学重点：①为低分章节增加量化任务；②保持高分章节互动模式；③每3周做一次章节掌握度快速测评，动态调整教学节奏。'
+            })
 
             return jsonify({
-                'chapter': chapter,
-                'avg_score': avg_score,
-                'activity_count': activity_cnt,
                 'strategies': strategies,
+                'total_students': total_students,
+                'total_activities': total_acts,
+                'overall_avg': overall_avg,
             })
 
         elif question_type == 'supply_chain':

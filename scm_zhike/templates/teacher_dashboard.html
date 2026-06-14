@@ -15,7 +15,14 @@
         .ds-stat { text-align: center; padding: 12px; }
         .ds-stat .val { font-size: 32px; font-weight: 700; color: #1976D2; }
         .ds-stat .lbl { font-size: 13px; color: #666; }
-        .strategy-item { padding: 8px 12px; margin: 4px 0; background: #f5f5f5; border-radius: 6px; font-size: 13px; }
+        .strategy-item { padding: 10px 12px; margin: 6px 0; background: #fafafa; border-radius: 8px; font-size: 13px; border-left: 4px solid #1976D2; }
+        .strategy-item .str-head { font-weight: 600; font-size: 13.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .strategy-item .str-body { line-height: 1.65; color: #444; }
+        .str-tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .tag-warn { background: #FFF3E0; color: #E65100; }
+        .tag-alert { background: #FFEBEE; color: #C62828; }
+        .tag-best { background: #E8F5E9; color: #2E7D32; }
+        .tag-info { background: #E3F2FD; color: #1565C0; }
     </style>
 </head>
 <body>
@@ -109,17 +116,18 @@
             <div class="ds-grid" style="height:320px">
                 <div class="ds-card"><h3>实践任务平均得分</h3><canvas id="ds-chart-practice"></canvas></div>
                 <div class="ds-card"><h3>学生反馈评分分布</h3><canvas id="ds-chart-feedback"></canvas></div>
-                <div class="ds-card"><h3>教学策略AI建议</h3><div id="ds-strategy-box" style="max-height:260px;overflow-y:auto"><div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">📊 学生整体掌握良好（30人，平均分79.9），但章节间差异显著：库存管理(92.3)远高于发展趋势(66.9)，差距达25.4分</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">⚠️ 生产力管理(71.6)和产品设计(74.7)两个章节平均分低于75，建议增加1课时的案例讨论环节</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">📈 供应链概念章节访问量最高(17次)但平均分仅75.5，说明学生"看多练少"——访问多不代表掌握，建议增加该章实践任务难度</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">🔥 SCOR KPI设计任务平均分88.9(9人完成)和需求弹性模拟85.9(14人)表现优异，说明学生在有数学模型支撑的任务中表现更佳</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">📉 绘制SCM地图任务平均分仅0.0（1人完成），说明该任务设计存在问题——建议改为分组协作形式并提供范例模板</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">⏰ 学生活跃高峰集中在早晨7-8点(14次)和下午5-7点(14次)——建议将互动实践安排在此时段以获得最佳参与度</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">💬 87.5%学生评4星以上，但有一条3星反馈提到"分组不均衡，部分组人太多参与不进来"——建议每组严格控制在4-5人</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">✅ 完成8次任务的学生(魏子轩/尤思远/杨海明)平均分73.9-83.2，完成4次的学生(李玉兰)平均分75.8——任务量与成绩呈正相关，鼓励多练</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">📋 物流配送(84.0)和信息价值(84.1)章节成绩好但访问量低(仅2次)——可能教学内容吸引力不足，建议增加京东/美团等企业案例</div>
-<div class="strategy-item" style="line-height:1.6;font-size:13px;margin-bottom:6px">🎯 供应链整合和外包采购两章访问量高(8+5)但成绩中等(79.6/78.5)——学生对抽象概念理解有困难，建议增加啤酒游戏式互动帮助理解"整合"抽象概念</div>
-</div></div>
+                <div class="ds-card"><h3>教学策略AI建议</h3><div id="ds-strategy-box" style="max-height:260px;overflow-y:auto">
+	<div class="strategy-item"><div class="str-head">📊 供应链概念（访问18次，均分83.0）<span class="str-tag tag-warn">看多练少</span></div><div class="str-body"><b>数据分析：</b>供应链概念章访问量18次，全校最高；但实践任务平均分仅83.0分，位列中游。<br><b>原因剖析：</b>该章为基础概念章，学生浏览频次高但深度练习不足，了解多于掌握。<br><b>策略建议：</b>增加该章实践任务难度，引入真实供应链地图绘制和概念辨析题，将看转化为练。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 发展趋势（访问2次，均分66.9）<span class="str-tag tag-alert">成绩最低</span></div><div class="str-body"><b>数据分析：</b>发展趋势章均分66.9，全校最低；仅4人完成实践任务，访问量仅2次。<br><b>原因剖析：</b>章节偏宏观趋势论述，缺乏可量化的实践任务支撑，学生兴趣和参与度双低。<br><b>策略建议：</b>将发展趋势融入其他章节以案例形式教学，或增加2024-2025最新企业趋势数据对比分析任务。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 库存管理（访问3次，均分92.3）<span class="str-tag tag-best">成绩最优</span></div><div class="str-body"><b>数据分析：</b>库存管理章均分92.3，全校最高；7人参与实践，但仅有3次访问记录。<br><b>原因剖析：</b>啤酒游戏等数学模型驱动的互动任务使学生深度理解概念，成绩反映真实掌握水平。<br><b>策略建议：</b>将啤酒游戏的互动模式复制到其他章节（如供应链中断应急、配送路线优化），提升整体参与质量。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 SCOR KPI设计（均分88.9，9人完成）<span class="str-tag tag-best">高分任务</span></div><div class="str-body"><b>数据分析：</b>SCOR KPI设计均分88.9，仅次于库存管理；需求弹性模拟85.9分（14人完成）紧随其后。<br><b>原因剖析：</b>两类任务均有清晰的数学模型（KPI公式、弹性系数），学生有抓手，表现稳定。<br><b>策略建议：</b>在抽象概念章节（供应链整合、战略匹配）也引入数学模型或量化工具，降低理解门槛。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 全景地图任务（均分0.0，仅1人完成）<span class="str-tag tag-alert">任务失效</span></div><div class="str-body"><b>数据分析：</b>绘制供应链全景地图任务仅1人提交，得分0.0，13个任务中参与度和成绩双最低。<br><b>原因剖析：</b>任务过于开放缺乏模板指引、耗时过长或评分标准不明确，导致学生放弃。<br><b>策略建议：</b>改为分组协作形式（3-4人/组），提供范例模板和分步指南，将大任务拆分为2-3个子任务逐步完成。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 物流配送 & 信息价值（访问2次，均分84.0/84.1）<span class="str-tag tag-warn">访问冷热不均</span></div><div class="str-body"><b>数据分析：</b>物流配送和信息价值两章访问量仅各2次，但成绩分别高达84.0和84.1分，访问量与成绩严重倒挂。<br><b>原因剖析：</b>章节教学内容吸引力不足（缺乏热点案例），但实践任务设计合理，参与学生实际掌握了知识。<br><b>策略建议：</b>引入京东/美团/顺丰等企业最新案例（2024-2025年），提升章节吸引力；同时在热门章推荐这两个冷门优分章。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 活跃高峰 7-8点 & 17-19点<span class="str-tag tag-info">时段特征</span></div><div class="str-body"><b>数据分析：</b>早晨7-8点（14次）和下午5-7点（14次）为活跃双高峰；凌晨5点也有8次活动记录（可能为熬夜学习）。<br><b>原因剖析：</b>学生偏好课前和晚饭后时段使用系统，与研究生课程安排（早晚课为主）吻合。<br><b>策略建议：</b>将限时互动实践和在线讨论安排在17-19点时段；早晨7-8点推送当日学习任务提醒，利用通勤/早餐碎片时间。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 87.5%反馈4星以上，1条3星指出分组问题<span class="str-tag tag-info">反馈洞察</span></div><div class="str-body"><b>数据分析：</b>8条反馈中4星3条、5星4条、3星1条；3星反馈明确指出分组不均衡，部分组人太多参与不进来。<br><b>原因剖析：</b>当前分组方式缺乏人数控制机制，热门话题组人数可能膨胀到7-8人。<br><b>策略建议：</b>每组严格控制在4-5人，设置分组人数上限；课前预分组而非课上临时分，让每位学生有明确角色（记录员/发言人/数据分析师）。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 学生活跃度严重分化<span class="str-tag tag-warn">参与不均</span></div><div class="str-body"><b>数据分析：</b>TOP1严文鑫5次活动，TOP2-10仅3-4次；30名学生中多数活跃度偏低，总活动记录仅73条。<br><b>原因剖析：</b>缺乏常态化的学习激励和提醒机制，活跃学生可能属于自驱型，被动学生缺乏触达。<br><b>策略建议：</b>建立每周学习任务清单+自动提醒；设置活跃之星月度榜单；将系统活跃度纳入平时成绩（占比5-10%）。</div></div>
+	<div class="strategy-item"><div class="str-head">📊 总览：30名学生，均分80.4，153条实践记录<span class="str-tag tag-info">全局诊断</span></div><div class="str-body"><b>数据分析：</b>30名学生共完成153次实践任务，全章均分80.4；最高92.3（库存管理），最低66.9（发展趋势），极差25.4分。<br><b>原因剖析：</b>整体掌握良好但章节间差异显著——有数学模型的任务成绩高，纯概念/开放任务成绩低。<br><b>策略建议：</b>下一轮教学重点：①为低分章节增加量化任务；②保持高分章节互动模式；③每3周做一次章节掌握度快速测评，动态调整教学节奏。</div></div>
+	</div></div>
             </div>
         </div><script>
 function switchPanel(name, evt) {
@@ -150,22 +158,22 @@ function loadDataV() {
 
             var top5 = data.active_students.slice(0, 5);
             new Chart(document.getElementById('ds-chart-students'), {
-                type: 'bar', indexAxis: 'y',
+                type: 'bar',
                 data: { labels: top5.map(function(s) { return s.name; }), datasets: [{ label: '活动次数(次)', data: top5.map(function(s) { return s.count; }), backgroundColor: '#1976D2' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: '活动次数(次)' }, grace: 2 }, y: { title: { display: false } } } }
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: '活动次数(次)' }, grace: 2 }, y: { title: { display: false } } } }
             });
 
             var heatSorted = data.chapter_heat.slice().sort(function(a, b) { return b.count - a.count; });
             new Chart(document.getElementById('ds-chart-chapters'), {
-                type: 'bar', indexAxis: 'y',
+                type: 'bar',
                 data: { labels: heatSorted.map(function(c) { return c.chapter.length > 10 ? c.chapter.slice(0, 10) + '…' : c.chapter; }), datasets: [{ label: '访问次数(次)', data: heatSorted.map(function(c) { return c.count; }), backgroundColor: '#FF9800' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: '访问次数(次)' }, grace: 2 }, y: { title: { display: false }, ticks: { font: { size: 11 }, autoSkip: false } } }, layout: { padding: { left: 0, right: 10 } } }
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: '访问次数(次)' }, grace: 2 }, y: { title: { display: false }, ticks: { font: { size: 11 }, autoSkip: false } } }, layout: { padding: { left: 0, right: 10 } } }
             });
 
             new Chart(document.getElementById('ds-chart-hourly'), {
                 type: 'line',
-                data: { labels: data.hourly_activity.map(function(h) { return h.hour; }), datasets: [{ label: '活跃人次', data: data.hourly_activity.map(function(h) { return h.count; }), borderColor: '#4CAF50', fill: false, tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { x: { title: { display: true, text: '时段' } }, y: { title: { display: true, text: '活跃人次' } } } }
+                data: { labels: data.hourly_activity.map(function(h) { return h.hour; }), datasets: [{ label: '活跃人次', data: data.hourly_activity.map(function(h) { return h.count; }), borderColor: '#4CAF50', backgroundColor: 'rgba(76,175,80,0.1)', fill: true, tension: 0.3, pointRadius: 5, pointBackgroundColor: '#4CAF50' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { x: { title: { display: true, text: '时段' } }, y: { title: { display: true, text: '活跃人次' }, beginAtZero: true } } }
             });
 
             new Chart(document.getElementById('ds-chart-practice'), {
@@ -180,10 +188,14 @@ function loadDataV() {
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
 
-            fetch('/bi/strategy', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'teaching', chapter: '库存管理' }) })
+            fetch('/bi/strategy', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'teaching' }) })
                 .then(function(r) { return r.json(); })
                 .then(function(s) {
-                    document.getElementById('ds-strategy-box').innerHTML = s.strategies.map(function(t) { return '<div class="strategy-item">' + t + '</div>'; }).join('');
+                    if (s.strategies && s.strategies.length > 0) {
+                        document.getElementById('ds-strategy-box').innerHTML = s.strategies.map(function(t) {
+                            return '<div class="strategy-item"><div class="str-head">' + t.head + '</div><div class="str-body">' + t.body + '</div></div>';
+                        }).join('');
+                    }
                 });
         });
 }
