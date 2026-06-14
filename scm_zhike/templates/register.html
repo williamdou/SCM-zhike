@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="auth-body">
-    <div class="auth-container">
+    <div class="auth-container" style="max-width:460px">
         <div class="auth-header">
             <div class="auth-logo">📚</div>
             <h1>注册新账号</h1>
@@ -49,16 +49,24 @@
                 <input type="password" name="password2" required placeholder="再次输入密码">
             </div>
             <div class="form-group">
-                <label>学号/工号</label>
+                <label>学号</label>
                 <input type="text" name="student_id" placeholder="选填">
             </div>
             <div class="form-group">
-                <label>学校</label>
-                <input type="text" name="school" placeholder="选填">
+                <label>年级 <span class="required">*</span></label>
+                <select name="grade" required>
+                    <option value="">请选择年级</option>
+                    <option value="2026级">2026级</option>
+                    <option value="2025级">2025级</option>
+                    <option value="2024级">2024级</option>
+                    <option value="2023级">2023级</option>
+                    <option value="2022级">2022级</option>
+                    <option value="其他">其他</option>
+                </select>
             </div>
             <div class="form-group">
-                <label>院系</label>
-                <input type="text" name="department" placeholder="选填">
+                <label>班级</label>
+                <input type="text" name="class_name" placeholder="例如：管理科学与工程1班">
             </div>
             <button type="submit" class="btn btn-primary btn-block">注 册</button>
         </form>

@@ -25,8 +25,8 @@
             <table class="data-table">
                 <tr><td>用户名</td><td>{{ student.username }}</td></tr>
                 <tr><td>学号</td><td>{{ student.student_id or '-' }}</td></tr>
-                <tr><td>学校</td><td>{{ student.school or '-' }}</td></tr>
-                <tr><td>院系</td><td>{{ student.department or '-' }}</td></tr>
+                <tr><td>年级</td><td>{{ student.grade or '-' }}</td></tr>
+                <tr><td>班级</td><td>{{ student.class_name or '-' }}</td></tr>
                 <tr><td>注册时间</td><td>{{ student.created_at[:16] }}</td></tr>
             </table>
         </div>

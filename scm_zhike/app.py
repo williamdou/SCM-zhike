@@ -40,8 +40,8 @@ def init_db():
             role TEXT NOT NULL CHECK(role IN ('teacher','student')),
             realname TEXT NOT NULL,
             student_id TEXT,
-            school TEXT,
-            department TEXT,
+            grade TEXT,
+            class_name TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -94,6 +94,10 @@ def init_db():
 
 # Initialize DB at startup
 init_db()
+
+# Re-register BI module with actual get_db function
+from bi_module import register_bi_routes
+register_bi_routes(app, get_db)
 
 # ============================================================
 # Auth decorators
@@ -174,11 +178,15 @@ def register_page():
         role = request.form.get('role', 'student')
         realname = request.form.get('realname', '').strip()
         student_id = request.form.get('student_id', '').strip()
-        school = request.form.get('school', '').strip()
-        department = request.form.get('department', '').strip()
+        grade = request.form.get('grade', '').strip()
+        class_name = request.form.get('class_name', '').strip()
 
         if not username or not password or not realname:
             flash('请填写必填字段', 'error')
+            return render_template('register.html')
+
+        if role == 'student' and not grade:
+            flash('学生请选择年级', 'error')
             return render_template('register.html')
 
         if password != password2:
@@ -201,8 +209,8 @@ def register_page():
 
         pw_hash = hashlib.sha256(password.encode()).hexdigest()
         db.execute(
-            "INSERT INTO users (username, password_hash, role, realname, student_id, school, department) VALUES (?,?,?,?,?,?,?)",
-            (username, pw_hash, role, realname, student_id, school, department)
+            "INSERT INTO users (username, password_hash, role, realname, student_id, grade, class_name) VALUES (?,?,?,?,?,?,?)",
+            (username, pw_hash, role, realname, student_id, grade, class_name)
         )
         db.commit()
         db.close()
